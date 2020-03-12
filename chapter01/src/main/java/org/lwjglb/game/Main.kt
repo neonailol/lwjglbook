@@ -7,6 +7,10 @@ import org.lwjgl.glfw.GLFWErrorCallback
 import org.lwjgl.opengl.GL
 import org.lwjgl.opengl.GL11
 import org.lwjgl.system.MemoryUtil
+import org.tinylog.Level
+import org.tinylog.kotlin.Logger
+import java.io.OutputStream
+import java.io.PrintStream
 
 class Main {
 
@@ -16,7 +20,7 @@ class Main {
     private val windowsHeight = 300
 
     fun run() {
-        println("Hello LWJGL " + Version.getVersion() + "!")
+        Logger.info("Hello LWJGL " + Version.getVersion() + "!")
         try {
             init()
             loop()
@@ -27,14 +31,14 @@ class Main {
         } finally {
             // Terminate GLFW and release the GLFWerrorfun
             GLFW.glfwTerminate()
-            GLFW.glfwSetErrorCallback(null) !!.free()
+            GLFW.glfwSetErrorCallback(null)?.free()
         }
     }
 
     private fun init() {
         // Setup an error callback. The default implementation
         // will print the error message in System.err.
-        GLFWErrorCallback.createPrint(System.err).set()
+        GLFWErrorCallback.createPrint(SystemLogger(Level.ERROR, System.err)).set()
 
         // Initialize GLFW. Most GLFW functions will not work before doing this.
         check(GLFW.glfwInit()) { "Unable to initialize GLFW" }
@@ -101,6 +105,55 @@ class Main {
         }
     }
 
+}
+
+/**
+ * A SystemLogger class that redirects another stream like e.g. stdout or stderr to the tinylog logger
+ */
+class SystemLogger(private val logLevel: Level, out: OutputStream) : PrintStream(out) {
+
+    private val logMessage = StringBuilder()
+    private var logToLogger = true
+
+    private fun flushLogMessage() {
+        val str = logMessage.toString()
+        logMessage.setLength(0) // set length of buffer to 0
+        logMessage.trimToSize() // trim the underlying buffer
+        when (logLevel) {
+            Level.INFO -> Logger.info(str)
+            Level.ERROR -> Logger.error(str)
+            Level.TRACE -> Logger.trace(str)
+            Level.DEBUG -> Logger.debug(str)
+            Level.WARN -> Logger.warn(str)
+
+            Level.OFF -> {
+            }
+        }
+    }
+
+    override fun write(buf: ByteArray, off: Int, len: Int) {
+        /*
+         * Log to tinylog as long as the Logger is available (before shutdown)
+         * As tinylog will forward all logs to the console, we do not call the super method
+         */
+        if (logToLogger) {
+            val str = String(buf, off, len)
+            if (str.endsWith("\n")) {
+                logMessage.append(str, 0, str.length - 1)
+                flushLogMessage()
+            } else {
+                logMessage.append(str)
+            }
+        } else {
+            super.write(buf, off, len)
+        }
+    }
+
+    init {
+
+        // In order to stop logging on shutdown, we need to make sure that we do not call the Logger anymore
+        Runtime.getRuntime().addShutdownHook(Thread(Runnable { logToLogger = false }))
+    }
 }
 
 fun main() {
