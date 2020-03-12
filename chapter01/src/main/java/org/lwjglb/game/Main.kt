@@ -1,112 +1,108 @@
-package org.lwjglb.game;
+package org.lwjglb.game
 
-import org.lwjgl.glfw.*;
-import org.lwjgl.opengl.*;
+import org.lwjgl.Version
+import org.lwjgl.glfw.Callbacks
+import org.lwjgl.glfw.GLFW
+import org.lwjgl.glfw.GLFWErrorCallback
+import org.lwjgl.opengl.GL
+import org.lwjgl.opengl.GL11
+import org.lwjgl.system.MemoryUtil
 
-import org.lwjgl.Version;
-import static org.lwjgl.glfw.Callbacks.*;
-
-import static org.lwjgl.glfw.GLFW.*;
-import static org.lwjgl.opengl.GL11.*;
-import static org.lwjgl.system.MemoryUtil.*;
-
-public class Main {
+class Main {
 
     // The window handle
-    private long window;
+    private var window: Long = 0
+    private val windowWidth = 300
+    private val windowsHeight = 300
 
-    public void run() {
-        System.out.println("Hello LWJGL " + Version.getVersion() + "!");
-
+    fun run() {
+        println("Hello LWJGL " + Version.getVersion() + "!")
         try {
-            init();
-            loop();
+            init()
+            loop()
 
             // Release window and window callbacks
-            glfwFreeCallbacks(window);
-            glfwDestroyWindow(window);
+            Callbacks.glfwFreeCallbacks(window)
+            GLFW.glfwDestroyWindow(window)
         } finally {
             // Terminate GLFW and release the GLFWerrorfun
-            glfwTerminate();
-            glfwSetErrorCallback(null).free();
+            GLFW.glfwTerminate()
+            GLFW.glfwSetErrorCallback(null) !!.free()
         }
     }
 
-    private void init() {
+    private fun init() {
         // Setup an error callback. The default implementation
         // will print the error message in System.err.
-        GLFWErrorCallback.createPrint(System.err).set();
+        GLFWErrorCallback.createPrint(System.err).set()
 
         // Initialize GLFW. Most GLFW functions will not work before doing this.
-        if (!glfwInit()) {
-            throw new IllegalStateException("Unable to initialize GLFW");
-        }
+        check(GLFW.glfwInit()) { "Unable to initialize GLFW" }
 
         // Configure our window
-        glfwDefaultWindowHints(); // optional, the current window hints are already the default
-        glfwWindowHint(GLFW_VISIBLE, GL_FALSE); // the window will stay hidden after creation
-        glfwWindowHint(GLFW_RESIZABLE, GL_TRUE); // the window will be resizable
-
-        int WIDTH = 300;
-        int HEIGHT = 300;
+        GLFW.glfwDefaultWindowHints() // optional, the current window hints are already the default
+        GLFW.glfwWindowHint(GLFW.GLFW_VISIBLE, GL11.GL_FALSE) // the window will stay hidden after creation
+        GLFW.glfwWindowHint(GLFW.GLFW_RESIZABLE, GL11.GL_TRUE) // the window will be resizable
 
         // Create the window
-        window = glfwCreateWindow(WIDTH, HEIGHT, "Hello World!", NULL, NULL);
-        if (window == NULL) {
-            throw new RuntimeException("Failed to create the GLFW window");
+        window = GLFW.glfwCreateWindow(windowWidth, windowsHeight, "Hello World!", MemoryUtil.NULL, MemoryUtil.NULL)
+        if (window == MemoryUtil.NULL) {
+            throw RuntimeException("Failed to create the GLFW window")
         }
 
         // Setup a key callback. It will be called every time a key is pressed, repeated or released.
-        glfwSetKeyCallback(window, (window, key, scancode, action, mods) -> {
-            if (key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE) {
-                glfwSetWindowShouldClose(window, true); // We will detect this in the rendering loop
+        GLFW.glfwSetKeyCallback(window) { window: Long, key: Int, _: Int, action: Int, _: Int ->
+            if (key == GLFW.GLFW_KEY_ESCAPE && action == GLFW.GLFW_RELEASE) {
+                GLFW.glfwSetWindowShouldClose(
+                    window,
+                    true
+                ) // We will detect this in the rendering loop
             }
-        });
+        }
 
         // Get the resolution of the primary monitor
-        GLFWVidMode vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+        val videoMode = GLFW.glfwGetVideoMode(GLFW.glfwGetPrimaryMonitor()) ?: throw NullPointerException()
         // Center our window
-        glfwSetWindowPos(
-                window,
-                (vidmode.width() - WIDTH) / 2,
-                (vidmode.height() - HEIGHT) / 2
-        );
+        GLFW.glfwSetWindowPos(
+            window,
+            (videoMode.width() - windowWidth) / 2,
+            (videoMode.height() - windowsHeight) / 2
+        )
 
         // Make the OpenGL context current
-        glfwMakeContextCurrent(window);
+        GLFW.glfwMakeContextCurrent(window)
         // Enable v-sync
-        glfwSwapInterval(1);
+        GLFW.glfwSwapInterval(1)
 
         // Make the window visible
-        glfwShowWindow(window);
+        GLFW.glfwShowWindow(window)
     }
 
-    private void loop() {
+    private fun loop() {
         // This line is critical for LWJGL's interoperation with GLFW's
         // OpenGL context, or any context that is managed externally.
         // LWJGL detects the context that is current in the current thread,
         // creates the ContextCapabilities instance and makes the OpenGL
         // bindings available for use.
-        GL.createCapabilities();
+        GL.createCapabilities()
 
         // Set the clear color
-        glClearColor(1.0f, 0.0f, 0.0f, 0.0f);
+        GL11.glClearColor(1.0f, 0.0f, 0.0f, 0.0f)
 
         // Run the rendering loop until the user has attempted to close
         // the window or has pressed the ESCAPE key.
-        while (!glfwWindowShouldClose(window)) {
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // clear the framebuffer
-
-            glfwSwapBuffers(window); // swap the color buffers
+        while (! GLFW.glfwWindowShouldClose(window)) {
+            GL11.glClear(GL11.GL_COLOR_BUFFER_BIT or GL11.GL_DEPTH_BUFFER_BIT) // clear the framebuffer
+            GLFW.glfwSwapBuffers(window) // swap the color buffers
 
             // Poll for window events. The key callback above will only be
             // invoked during this call.
-            glfwPollEvents();
+            GLFW.glfwPollEvents()
         }
     }
 
-    public static void main(String[] args) {
-        new Main().run();
-    }
+}
 
+fun main() {
+    Main().run()
 }
